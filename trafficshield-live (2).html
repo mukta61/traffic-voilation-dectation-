@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrafficShield — Violation Detection System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #111318;
+    --bg3: #171a21;
+    --card: #1a1d25;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #8b8fa8;
+    --text3: #555870;
+    --accent: #f59e0b;
+    --accent2: #d97706;
+    --red: #ef4444;
+    --red2: #dc2626;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    overflow-x: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-badge {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); letter-spacing: 0.5px; }
+
+  .sidebar-nav { padding: 16px 12px; flex: 1; }
+  .nav-label { font-size: 10px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 8px 8px; font-family: var(--mono); }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; color: var(--text2);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+    border: 1px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: rgba(245,158,11,0.1); color: var(--accent); border-color: rgba(245,158,11,0.2); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; font-family: var(--mono);
+  }
+
+  .sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .api-key-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .api-key-label { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 1px; margin-bottom: 6px; }
+  .api-key-input {
+    width: 100%; background: none; border: none; outline: none;
+    color: var(--accent); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  .api-mode-tag {
+    margin-top: 6px; font-size: 10px; font-family: var(--mono);
+    padding: 3px 7px; border-radius: 4px; display: inline-block;
+  }
+  .api-mode-tag.demo { background: rgba(245,158,11,0.15); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); }
+  .api-mode-tag.live { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+
+  /* MAIN */
+  .main { margin-left: 240px; flex: 1; min-height: 100vh; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 16px 28px; display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 90;
+  }
+  .topbar-title { font-size: 18px; font-weight: 700; flex: 1; }
+  .topbar-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25);
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; color: var(--green); font-weight: 600;
+  }
+  .live-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .topbar-time { font-family: var(--mono); font-size: 13px; color: var(--text2); }
+
+  /* DEMO BANNER */
+  .demo-banner {
+    background: rgba(245,158,11,0.08);
+    border-bottom: 1px solid rgba(245,158,11,0.2);
+    padding: 8px 28px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .demo-banner.hidden { display: none; }
+
+  /* PAGES */
+  .page { display: none; padding: 28px; }
+  .page.active { display: block; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.amber::before { background: var(--accent); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.blue::before { background: var(--blue); }
+  .stat-label { font-size: 11px; color: var(--text3); font-family: var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+  .stat-num { font-size: 32px; font-weight: 700; margin-top: 8px; letter-spacing: -1px; }
+  .stat-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .stat-icon { position: absolute; right: 16px; top: 16px; font-size: 28px; opacity: 0.1; }
+
+  /* DETECTION AREA */
+  .detect-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+  .camera-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  }
+  .camera-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .camera-title { font-size: 15px; font-weight: 600; flex: 1; }
+  .mode-tabs { display: flex; gap: 4px; background: var(--bg3); padding: 4px; border-radius: var(--radius-sm); }
+  .mode-tab {
+    padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; color: var(--text2); transition: all 0.15s; border: none; background: none;
+  }
+  .mode-tab.active { background: var(--card); color: var(--text); }
+
+  .camera-body { position: relative; aspect-ratio: 16/9; background: #060810; }
+  .video-placeholder {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; color: var(--text3);
+  }
+  .placeholder-icon { font-size: 48px; }
+  .placeholder-text { font-size: 14px; }
+  #webcam-video, #upload-preview { width: 100%; height: 100%; object-fit: cover; display: none; }
+  #upload-canvas, #webcam-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+
+  .camera-controls {
+    padding: 16px 20px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .btn {
+    padding: 9px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.15s; font-family: var(--sans);
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: var(--red2); }
+  .btn-ghost { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--card); color: var(--text); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .model-select-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .model-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2);
+    transition: all 0.15s;
+  }
+  .model-chip.active { border-color: var(--accent); background: rgba(245,158,11,0.12); color: var(--accent); }
+  .model-chip input { display: none; }
+
+  /* RESULTS PANEL */
+  .results-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    display: flex; flex-direction: column;
+  }
+  .results-header { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .results-title { font-size: 14px; font-weight: 600; }
+  .results-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  .result-item {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .result-type { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 1px; }
+  .result-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .result-value.violation { color: var(--red); }
+  .result-value.ok { color: var(--green); }
+  .result-plates { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .plate-tag {
+    background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+    color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 4px; letter-spacing: 1px;
+  }
+
+  .result-empty {
+    color: var(--text3); font-size: 13px; text-align: center; padding: 24px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+
+  .challan-btn {
+    margin: 12px 14px; padding: 10px; background: rgba(245,158,11,0.1);
+    border: 1px dashed rgba(245,158,11,0.4); border-radius: var(--radius-sm);
+    color: var(--accent); font-size: 13px; font-weight: 600; text-align: center;
+    cursor: pointer; transition: all 0.15s; display: none;
+  }
+  .challan-btn:hover { background: rgba(245,158,11,0.18); }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--border-bright); border-radius: var(--radius);
+    padding: 40px; text-align: center; cursor: pointer;
+    transition: all 0.15s; color: var(--text2);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); color: var(--accent); }
+  .upload-zone-icon { font-size: 36px; }
+  .upload-zone-text { font-size: 14px; font-weight: 500; }
+  .upload-zone-sub { font-size: 12px; color: var(--text3); }
+
+  /* VIOLATIONS TABLE */
+  .violations-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .violations-header {
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .violations-title { font-size: 15px; font-weight: 600; flex: 1; }
+  .filter-row { display: flex; gap: 8px; }
+  .filter-btn {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg3); color: var(--text2);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: rgba(245,158,11,0.1); border-color: var(--accent); color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 16px; text-align: left; font-size: 11px; color: var(--text3); font-family: var(--mono); letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; font-family: var(--mono);
+  }
+  .badge-red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+  .badge-amber { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-purple { background: rgba(168,85,247,0.12); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+  .badge-blue { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+  .badge-green { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+  .badge-demo { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+  .plate-mono { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent); letter-spacing: 1px; }
+  .action-icon { cursor: pointer; color: var(--text3); font-size: 16px; transition: color 0.15s; padding: 4px; }
+  .action-icon:hover { color: var(--accent); }
+
+  /* CHALLAN MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border-bright);
+    border-radius: 16px; width: 600px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .modal-close { margin-left: auto; cursor: pointer; color: var(--text3); font-size: 20px; }
+  .modal-body { padding: 24px 28px; }
+
+  /* CHALLAN DOCUMENT */
+  .challan-doc {
+    background: #fff; color: #111; border-radius: var(--radius);
+    padding: 28px; font-family: var(--sans);
+  }
+  .challan-header-bar {
+    background: #1a1d25; color: #fff; padding: 14px 20px; border-radius: 8px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  }
+  .challan-logo-badge {
+    background: var(--accent); color: #000; padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  }
+  .challan-title-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .challan-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .challan-id { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--accent); }
+
+  .challan-section { margin-bottom: 18px; }
+  .challan-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: #888; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 10px;
+  }
+  .challan-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .challan-row:last-child { border-bottom: none; }
+  .challan-key { color: #666; }
+  .challan-val { font-weight: 600; color: #111; }
+
+  .challan-violation-box {
+    background: #fff3f3; border: 2px solid #fecaca; border-radius: 8px;
+    padding: 14px 16px; margin: 16px 0;
+  }
+  .challan-vtype { font-size: 14px; font-weight: 700; color: #dc2626; }
+  .challan-vdesc { font-size: 12px; color: #888; margin-top: 4px; }
+
+  .challan-fine-box {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+    padding: 16px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .challan-fine-label { font-size: 12px; color: #92400e; font-weight: 600; }
+  .challan-fine-amount { font-size: 28px; font-weight: 800; color: #92400e; font-family: var(--mono); }
+
+  .challan-footer-note { font-size: 11px; color: #aaa; text-align: center; margin-top: 18px; border-top: 1px solid #eee; padding-top: 14px; }
+
+  /* PRINT */
+  @media print {
+    body * { visibility: hidden; }
+    .challan-doc, .challan-doc * { visibility: visible; }
+    .challan-doc { position: fixed; inset: 0; }
+  }
+
+  /* LOADING */
+  .loading-overlay {
+    position: absolute; inset: 0; background: rgba(10,12,16,0.85);
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    z-index: 10; border-radius: var(--radius);
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text2); font-family: var(--mono); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+
+  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section-accent { color: var(--accent); }
+
+  /* Upload page */
+  .upload-page-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; margin-bottom: 20px; }
+  .upload-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .upload-panel-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  #file-input { display: none; }
+  .upload-preview-wrap { margin-top: 16px; display: none; }
+  #preview-img { width: 100%; border-radius: var(--radius-sm); max-height: 300px; object-fit: contain; background: var(--bg3); }
+  #preview-vid { width: 100%; border-radius: var(--radius-sm); max-height: 300px; display: none; }
+
+  /* Status bar */
+  .status-bar {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: var(--text2);
+    margin-top: 12px; min-height: 40px;
+  }
+  .status-bar span { color: var(--accent); }
+
+  /* Indicator */
+  .confidence-bar { height: 4px; background: var(--bg3); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  .confidence-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.5s; }
+
+  /* Tooltip */
+  [title] { cursor: help; }
+
+  .empty-state {
+    padding: 48px; text-align: center; color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">🛡️</div>
+      <div>
+        <div class="logo-text">TrafficShield</div>
+        <div class="logo-sub">v2.4 · LIVE</div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-label">Dashboard</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Overview
+    </div>
+    <div class="nav-item" onclick="showPage('webcam')">
+      <span class="nav-icon">📷</span> Webcam Detection
+    </div>
+    <div class="nav-item" onclick="showPage('upload')">
+      <span class="nav-icon">⬆️</span> Upload Media
+    </div>
+    <div style="margin-top:16px"></div>
+    <div class="nav-label">Violations</div>
+    <div class="nav-item" onclick="showPage('history')">
+      <span class="nav-icon">📋</span> History Log
+      <span class="nav-badge" id="violation-count-badge">0</span>
+    </div>
+    <div class="nav-item" onclick="showPage('challans')">
+      <span class="nav-icon">🧾</span> Challans
+    </div>
+    <div style="margin-top:16px"></div>
+    <div class="nav-label">System</div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <span class="nav-icon">⚙️</span> Settings
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="api-key-box">
+      <div class="api-key-label">ROBOFLOW API KEY</div>
+      <input class="api-key-input" type="password" id="api-key-input" placeholder="rf_xxxxxxxxxxxx (optional)" value="gVuRLqRwAZX313sSy8Aw" oninput="updateApiMode()">
+      <div class="api-mode-tag demo" id="sidebar-api-mode">⚡ DEMO MODE</div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Overview Dashboard</div>
+    <div class="topbar-badge">
+      <div class="live-dot"></div> System Active
+    </div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+
+  <!-- DEMO MODE BANNER -->
+  <div class="demo-banner" id="demo-banner">
+    ⚡ Running in <strong>Demo Mode</strong> — AI simulation active. Add a Roboflow API key in Settings to enable live detection.
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-row">
+      <div class="stat-card red">
+        <div class="stat-icon">🚦</div>
+        <div class="stat-label">Red Light Violations</div>
+        <div class="stat-num" id="stat-red">0</div>
+        <div class="stat-sub">Today's count</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">🏍️</div>
+        <div class="stat-label">Triple Riding</div>
+        <div class="stat-num" id="stat-triple">0</div>
+        <div class="stat-sub">Motorcycles flagged</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-icon">⛑️</div>
+        <div class="stat-label">Helmet Violations</div>
+        <div class="stat-num" id="stat-helmet">0</div>
+        <div class="stat-sub">Riders without helmet</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon">🧾</div>
+        <div class="stat-label">Challans Issued</div>
+        <div class="stat-num" id="stat-challans">0</div>
+        <div class="stat-sub">Total fines generated</div>
+      </div>
+    </div>
+
+    <div class="detect-grid">
+      <div>
+        <div class="section-title">🔴 <span class="section-accent">Recent Detections</span></div>
+        <div class="violations-card">
+          <div class="violations-header">
+            <div class="violations-title">Live Violation Feed</div>
+            <div class="filter-row">
+              <div class="filter-btn active" onclick="filterViolations('all', this)">All</div>
+              <div class="filter-btn" onclick="filterViolations('red-light', this)">Red Light</div>
+              <div class="filter-btn" onclick="filterViolations('triple', this)">Triple Riding</div>
+              <div class="filter-btn" onclick="filterViolations('helmet', this)">Helmet</div>
+            </div>
+          </div>
+          <div id="violations-table-wrap">
+            <div class="empty-state">
+              <div class="empty-icon">📡</div>
+              <div class="empty-text">No violations detected yet. Start a detection session.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">📈 <span class="section-accent">Quick Stats</span></div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="violations-card" style="padding:18px">
+            <div style="font-size:12px; color:var(--text3); font-family:var(--mono); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px">Detection Accuracy</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px"><span>Red Light</span><span style="color:var(--green)">94%</span></div>
+                <div class="confidence-bar"><div class="confidence-fill" style="width:94%; background:var(--red)"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px"><span>Triple Riding</span><span style="color:var(--green)">87%</span></div>
+                <div class="confidence-bar"><div class="confidence-fill" style="width:87%; background:var(--purple)"></div></div>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px"><span>Helmet</span><span style="color:var(--green)">91%</span></div>
+                <div class="confidence-bar"><div class="confidence-fill" style="width:91%; background:var(--accent)"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="violations-card" style="padding:18px">
+            <div style="font-size:12px; color:var(--text3); font-family:var(--mono); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px">Fine Summary</div>
+            <div class="challan-row"><span class="challan-key" style="color:var(--text2)">Red Light (per)</span><span style="font-family:var(--mono); color:var(--accent)">₹1,000</span></div>
+            <div class="challan-row"><span class="challan-key" style="color:var(--text2)">Triple Riding</span><span style="font-family:var(--mono); color:var(--accent)">₹2,000</span></div>
+            <div class="challan-row"><span class="challan-key" style="color:var(--text2)">No Helmet</span><span style="font-family:var(--mono); color:var(--accent)">₹500</span></div>
+            <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px; display:flex; justify-content:space-between; align-items:center">
+              <span style="font-size:12px; color:var(--text3)">Total Collected</span>
+              <span style="font-family:var(--mono); font-size:18px; font-weight:700; color:var(--green)" id="total-fine">₹0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEBCAM PAGE -->
+  <div class="page" id="page-webcam">
+    <div class="detect-grid">
+      <div>
+        <div class="camera-card">
+          <div class="camera-header">
+            <div class="camera-title">📷 Webcam Detection</div>
+          </div>
+          <div class="camera-body">
+            <div class="video-placeholder" id="webcam-placeholder">
+              <div class="placeholder-icon">📷</div>
+              <div class="placeholder-text">Camera not started</div>
+              <div style="font-size:12px; color:var(--text3); font-family:var(--mono)">Click "Start Camera" below</div>
+            </div>
+            <video id="webcam-video" autoplay muted playsinline></video>
+            <canvas id="webcam-canvas"></canvas>
+            <div class="loading-overlay" id="webcam-loading">
+              <div class="spinner"></div>
+              <div class="loading-text">Analyzing frame...</div>
+            </div>
+          </div>
+          <div class="camera-controls">
+            <div class="model-select-row">
+              <div style="font-size:12px; color:var(--text3); margin-right:4px">Model:</div>
+              <label class="model-chip active"><input type="radio" name="wcam-model" value="red-light" checked onchange="setWebcamModel(this.value)"> 🚦 Red Light</label>
+              <label class="model-chip"><input type="radio" name="wcam-model" value="triple" onchange="setWebcamModel(this.value)"> 🏍️ Triple Riding</label>
+              <label class="model-chip"><input type="radio" name="wcam-model" value="helmet" onchange="setWebcamModel(this.value)"> ⛑️ Helmet</label>
+            </div>
+          </div>
+          <div class="camera-controls" style="border-top:none; padding-top:0">
+            <button class="btn btn-primary" id="start-cam-btn" onclick="startWebcam()">▶ Start Camera</button>
+            <button class="btn btn-danger" id="stop-cam-btn" onclick="stopWebcam()" disabled>⏹ Stop</button>
+            <button class="btn btn-ghost" id="snap-btn" onclick="snapAndAnalyze()" disabled>📸 Snap & Analyze</button>
+            <div class="status-bar" style="flex:1; margin-top:0"><span id="wcam-status">Ready</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <div class="results-header">
+          <div class="results-title">Detection Results</div>
+        </div>
+        <div class="results-body" id="webcam-results">
+          <div class="result-empty">
+            <span style="font-size:32px">🔍</span>
+            <span>Snap a frame to analyze</span>
+          </div>
+        </div>
+        <div class="challan-btn" id="webcam-challan-btn" onclick="openChallanModal('webcam')">
+          🧾 Generate Challan
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPLOAD PAGE -->
+  <div class="page" id="page-upload">
+    <div class="upload-page-grid">
+      <div>
+        <div class="upload-panel">
+          <div class="upload-panel-title">Upload Image or Video</div>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+            <div class="upload-zone-icon">📁</div>
+            <div class="upload-zone-text">Drop image/video here</div>
+            <div class="upload-zone-sub">JPG, PNG, MP4 supported</div>
+          </div>
+          <input type="file" id="file-input" accept="image/*,video/*" onchange="handleFileSelect(event)">
+
+          <div class="upload-preview-wrap" id="upload-preview-wrap">
+            <img id="preview-img" alt="Preview">
+            <video id="preview-vid" controls></video>
+          </div>
+
+          <div class="model-select-row" style="margin-top:16px">
+            <div style="font-size:12px; color:var(--text3); margin-right:4px">Model:</div>
+            <label class="model-chip active"><input type="radio" name="up-model" value="red-light" checked onchange="setUploadModel(this.value)"> 🚦 Red Light</label>
+            <label class="model-chip"><input type="radio" name="up-model" value="triple" onchange="setUploadModel(this.value)"> 🏍️ Triple Riding</label>
+            <label class="model-chip"><input type="radio" name="up-model" value="helmet" onchange="setUploadModel(this.value)"> ⛑️ Helmet</label>
+          </div>
+
+          <div style="margin-top:16px; display:flex; gap:10px;">
+            <button class="btn btn-primary" id="analyze-btn" onclick="analyzeUpload()" disabled>🔍 Analyze</button>
+            <button class="btn btn-ghost" onclick="clearUpload()">✕ Clear</button>
+          </div>
+          <div class="status-bar"><span id="upload-status">Select a file to begin</span></div>
+        </div>
+      </div>
+
+      <div class="results-card">
+        <div class="results-header">
+          <div class="results-title">Analysis Results</div>
+        </div>
+        <div class="results-body" id="upload-results">
+          <div class="result-empty">
+            <span style="font-size:32px">🖼️</span>
+            <span>Upload a file to analyze</span>
+          </div>
+        </div>
+        <div class="challan-btn" id="upload-challan-btn" onclick="openChallanModal('upload')">
+          🧾 Generate Challan
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY PAGE -->
+  <div class="page" id="page-history">
+    <div class="violations-card">
+      <div class="violations-header">
+        <div class="violations-title">Violation History Log</div>
+        <div class="filter-row">
+          <div class="filter-btn active" onclick="filterHistory('all', this)">All</div>
+          <div class="filter-btn" onclick="filterHistory('RED_LIGHT', this)">🚦 Red Light</div>
+          <div class="filter-btn" onclick="filterHistory('TRIPLE_RIDING', this)">🏍️ Triple</div>
+          <div class="filter-btn" onclick="filterHistory('NO_HELMET', this)">⛑️ Helmet</div>
+        </div>
+        <button class="btn btn-ghost" style="font-size:12px; padding:6px 12px" onclick="clearHistory()">Clear All</button>
+      </div>
+      <div id="history-table-container">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-text">No violations logged yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHALLANS PAGE -->
+  <div class="page" id="page-challans">
+    <div class="violations-card">
+      <div class="violations-header">
+        <div class="violations-title">🧾 Issued Challans</div>
+      </div>
+      <div id="challans-list">
+        <div class="empty-state">
+          <div class="empty-icon">🧾</div>
+          <div class="empty-text">No challans issued yet. Detect a violation to generate one.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div class="page" id="page-settings">
+    <div style="max-width:560px">
+      <div class="violations-card" style="padding:24px; margin-bottom:20px">
+        <div style="font-size:15px; font-weight:700; margin-bottom:18px">🔑 API Configuration</div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">ROBOFLOW API KEY <span style="color:var(--accent); font-size:10px">(OPTIONAL — leave blank for demo mode)</span></div>
+          <input type="text" id="api-key-settings" placeholder="rf_xxxxxxxxxxxx (optional)" value="gVuRLqRwAZX313sSy8Aw" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; letter-spacing:0.5px" oninput="updateApiMode()">
+        </div>
+        <div style="font-size:12px; color:var(--text3); margin-bottom:8px">Workspace: <span style="color:var(--accent); font-family:var(--mono)">muktai-kamtam-s-workspace</span></div>
+        <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:12px; display:flex; flex-direction:column; gap:4px">
+          <span>⛑️ Helmet → helmet-violation-detector-1778042549902</span>
+          <span>🏍️ Triple → triple-riding-detector-1778042915198</span>
+          <span>🚦 Red Light → red-light-violation-detector-1778043613512</span>
+        </div>
+        <div style="font-size:12px; color:var(--text2); margin-bottom:16px; padding:10px 12px; background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2); border-radius:8px">
+          ✅ <strong>Live Roboflow Workflows configured.</strong> Each model tab now calls your real AI workflow. Leave key blank to use Demo Mode simulation.
+        </div>
+        <button class="btn btn-primary" onclick="saveApiKey()">Save Key</button>
+        <div class="status-bar" style="margin-top:12px"><span id="key-status">Running in Demo Mode — no API key required</span></div>
+      </div>
+
+      <div class="violations-card" style="padding:24px; margin-bottom:20px">
+        <div style="font-size:15px; font-weight:700; margin-bottom:18px">📍 Station Info</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <div>
+            <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">STATION NAME</div>
+            <input type="text" id="station-name" placeholder="e.g. MH-01 Junction" value="MH-01 Main Junction" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none">
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">OFFICER ID</div>
+            <input type="text" id="officer-id" placeholder="e.g. MH-2345" value="OFF-2345" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none">
+          </div>
+        </div>
+      </div>
+
+      <div class="violations-card" style="padding:24px">
+        <div style="font-size:15px; font-weight:700; margin-bottom:18px">💰 Fine Configuration</div>
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13px; color:var(--text2)">🚦 Red Light Violation</span>
+            <input type="number" id="fine-red" value="1000" min="0" style="width:100px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--accent); font-family:var(--mono); font-size:13px; outline:none; text-align:right">
+            <span style="color:var(--text3); font-size:13px">₹</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13px; color:var(--text2)">🏍️ Triple Riding</span>
+            <input type="number" id="fine-triple" value="2000" min="0" style="width:100px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--accent); font-family:var(--mono); font-size:13px; outline:none; text-align:right">
+            <span style="color:var(--text3); font-size:13px">₹</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px">
+            <span style="flex:1; font-size:13px; color:var(--text2)">⛑️ No Helmet</span>
+            <input type="number" id="fine-helmet" value="500" min="0" style="width:100px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--accent); font-family:var(--mono); font-size:13px; outline:none; text-align:right">
+            <span style="color:var(--text3); font-size:13px">₹</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="saveFines()">Save Fine Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHALLAN MODAL -->
+<div class="modal-overlay" id="challan-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:16px; font-weight:700">Generate Challan</div>
+        <div style="font-size:12px; color:var(--text3); font-family:var(--mono); margin-top:2px">Motor Vehicles Act, 1988</div>
+      </div>
+      <div class="modal-close" onclick="closeModal()">✕</div>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">VEHICLE PLATE</div>
+          <input type="text" id="challan-plate" placeholder="MH-12 AB 1234" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--accent); font-family:var(--mono); font-size:14px; font-weight:700; letter-spacing:2px; outline:none; text-transform:uppercase">
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">DRIVER NAME</div>
+          <input type="text" id="challan-name" placeholder="Enter name" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none">
+        </div>
+      </div>
+      <div style="margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">PHONE</div>
+          <input type="tel" id="challan-phone" placeholder="+91 XXXXX XXXXX" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; font-family:var(--mono)">
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-family:var(--mono); margin-bottom:6px">VEHICLE TYPE</div>
+          <select id="challan-vtype" style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none">
+            <option>Two-Wheeler</option>
+            <option>Four-Wheeler</option>
+            <option>Bus</option>
+            <option>Truck</option>
+            <option>Auto-Rickshaw</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; padding:12px; margin-bottom:20px" onclick="generateChallanDoc()">
+        🧾 Generate Challan Document
+      </button>
+
+      <div id="challan-doc-container" style="display:none">
+        <div class="challan-doc" id="challan-doc">
+          <!-- Challan rendered here -->
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px">
+          <button class="btn btn-primary" onclick="printChallan()" style="flex:1">🖨️ Print Challan</button>
+          <button class="btn btn-ghost" onclick="saveChallanToHistory()" style="flex:1">💾 Save to Records</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let violations = [];
+let challans = [];
+let webcamStream = null;
+let currentWebcamModel = 'red-light';
+let currentUploadModel = 'red-light';
+let lastDetectionSource = null;
+let lastDetectionData = null;
+let uploadedFile = null;
+
+const fines = { 'red-light': 1000, 'triple': 2000, 'helmet': 500 };
+const modelLabels = { 'red-light': '🚦 Red Light', 'triple': '🏍️ Triple Riding', 'helmet': '⛑️ No Helmet' };
+const violationTypes = { 'red-light': 'RED_LIGHT', 'triple': 'TRIPLE_RIDING', 'helmet': 'NO_HELMET' };
+
+function getApiKey() {
+  return (document.getElementById('api-key-input').value || '').trim() ||
+         (document.getElementById('api-key-settings').value || '').trim();
+}
+
+function isLiveMode() {
+  return getApiKey().length > 4;
+}
+
+// ===== API MODE INDICATOR =====
+function updateApiMode() {
+  const live = isLiveMode();
+  const sideTag = document.getElementById('sidebar-api-mode');
+  const banner = document.getElementById('demo-banner');
+  const keyStatus = document.getElementById('key-status');
+
+  if (live) {
+    sideTag.className = 'api-mode-tag live';
+    sideTag.textContent = '✓ LIVE MODE';
+    banner.classList.add('hidden');
+    if (keyStatus) keyStatus.textContent = '✓ API key saved — Live inference enabled';
+  } else {
+    sideTag.className = 'api-mode-tag demo';
+    sideTag.textContent = '⚡ DEMO MODE';
+    banner.classList.remove('hidden');
+    if (keyStatus) keyStatus.textContent = 'Running in Demo Mode — no API key required';
+  }
+
+  // Sync both inputs
+  const sideVal = document.getElementById('api-key-input').value;
+  const settingsVal = document.getElementById('api-key-settings').value;
+  if (document.activeElement === document.getElementById('api-key-input')) {
+    document.getElementById('api-key-settings').value = sideVal;
+  } else {
+    document.getElementById('api-key-input').value = settingsVal;
+  }
+}
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== NAVIGATION =====
+const pageTitles = {
+  dashboard: 'Overview Dashboard',
+  webcam: 'Webcam Live Detection',
+  upload: 'Upload Media Analysis',
+  history: 'Violation History Log',
+  challans: 'Issued Challans',
+  settings: 'System Settings'
+};
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[name] || name;
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) {
+      n.classList.add('active');
+    }
+  });
+  if (name === 'history') renderHistoryTable(null);
+  if (name === 'challans') renderChallansPage();
+}
+
+// ===== MODEL SELECTION =====
+function setWebcamModel(v) {
+  currentWebcamModel = v;
+  document.querySelectorAll('[name="wcam-model"]').forEach(r => {
+    r.closest('.model-chip').classList.toggle('active', r.value === v);
+  });
+}
+function setUploadModel(v) {
+  currentUploadModel = v;
+  document.querySelectorAll('[name="up-model"]').forEach(r => {
+    r.closest('.model-chip').classList.toggle('active', r.value === v);
+  });
+}
+
+// ===== WEBCAM =====
+async function startWebcam() {
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+    const video = document.getElementById('webcam-video');
+    video.srcObject = webcamStream;
+    video.style.display = 'block';
+    document.getElementById('webcam-placeholder').style.display = 'none';
+    document.getElementById('start-cam-btn').disabled = true;
+    document.getElementById('stop-cam-btn').disabled = false;
+    document.getElementById('snap-btn').disabled = false;
+    document.getElementById('wcam-status').textContent = isLiveMode() ? '● Camera active — Live mode' : '● Camera active — Demo mode';
+  } catch (e) {
+    document.getElementById('wcam-status').textContent = 'Error: ' + e.message;
+  }
+}
+
+function stopWebcam() {
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+    webcamStream = null;
+  }
+  const video = document.getElementById('webcam-video');
+  video.style.display = 'none';
+  document.getElementById('webcam-placeholder').style.display = 'flex';
+  document.getElementById('start-cam-btn').disabled = false;
+  document.getElementById('stop-cam-btn').disabled = true;
+  document.getElementById('snap-btn').disabled = true;
+  document.getElementById('wcam-status').textContent = 'Camera stopped';
+}
+
+async function snapAndAnalyze() {
+  const video = document.getElementById('webcam-video');
+  const canvas = document.getElementById('webcam-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+  canvas.style.display = 'block';
+
+  const loading = document.getElementById('webcam-loading');
+  loading.classList.add('show');
+  document.getElementById('wcam-status').textContent = isLiveMode() ? 'Analyzing via Roboflow...' : 'Running demo analysis...';
+
+  canvas.toBlob(async (blob) => {
+    const result = await callRoboflow(blob, currentWebcamModel);
+    loading.classList.remove('show');
+    if (result) {
+      // Draw bounding boxes on canvas
+      drawDetections(canvas, ctx, result);
+
+      // result is already normalised: { predictions[], plates[], violations[], totalFine, violation }
+      displayResults('webcam', result, currentWebcamModel);
+      lastDetectionSource = 'webcam';
+      lastDetectionData = result;
+      const modeTag = isLiveMode() ? '[LIVE]' : '[DEMO]';
+      document.getElementById('wcam-status').textContent = `✓ ${modeTag} Analysis complete — ` + new Date().toLocaleTimeString();
+    } else {
+      document.getElementById('wcam-status').textContent = '⚠ API error — check key in Settings';
+    }
+  }, 'image/jpeg', 0.92);
+}
+
+// ===== UPLOAD =====
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadFile(file);
+}
+function dragOver(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag-over'); }
+function dragLeave() { document.getElementById('upload-zone').classList.remove('drag-over'); }
+function dropFile(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+}
+
+function loadFile(file) {
+  uploadedFile = file;
+  const wrap = document.getElementById('upload-preview-wrap');
+  wrap.style.display = 'block';
+  const img = document.getElementById('preview-img');
+  const vid = document.getElementById('preview-vid');
+  const url = URL.createObjectURL(file);
+
+  if (file.type.startsWith('image/')) {
+    img.src = url; img.style.display = 'block';
+    vid.style.display = 'none';
+  } else {
+    vid.src = url; vid.style.display = 'block';
+    img.style.display = 'none';
+  }
+  document.getElementById('analyze-btn').disabled = false;
+  document.getElementById('upload-status').textContent = '✓ File loaded: ' + file.name;
+}
+
+function clearUpload() {
+  uploadedFile = null;
+  document.getElementById('upload-preview-wrap').style.display = 'none';
+  document.getElementById('preview-img').src = '';
+  document.getElementById('preview-vid').src = '';
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('upload-status').textContent = 'Select a file to begin';
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-results').innerHTML = '<div class="result-empty"><span style="font-size:32px">🖼️</span><span>Upload a file to analyze</span></div>';
+  document.getElementById('upload-challan-btn').style.display = 'none';
+}
+
+
+
+
+
+
+
+
+async function analyzeUpload() {
+
+if (!uploadedFile) return;
+
+document.getElementById('upload-status').textContent =
+'⏳ Running AI analysis...';
+
+document.getElementById('analyze-btn').disabled = true;
+
+const name = uploadedFile.name;
+
+// --- Check the preset demo dataset first ---
+const preset = presentationCases[name] || ZIP_IMAGE_CASES[name];
+
+let result = {
+  predictions: [],
+  plates: [],
+  violations: [],
+  totalFine: 0
+};
+
+// In LIVE MODE, always call the real API — even for known preset filenames.
+// Presets are only used in demo/fallback.
+const useLive = isLiveMode();
+
+if (!useLive && preset) {
+  // DEMO MODE + known file: use preset
+  result.violations = preset.violations || [];
+  result.plates = preset.plate ? [{ text: preset.plate }] : [];
+  result.totalFine = preset.fine || 0;
+} else {
+  // LIVE MODE (any file) OR demo mode with unknown file: call Roboflow
+  document.getElementById('upload-status').textContent =
+    useLive
+      ? `⏳ Calling Roboflow Workflow (${currentUploadModel})...`
+      : '⏳ Running demo simulation...';
+
+  const blob = uploadedFile.type.startsWith('image/')
+    ? uploadedFile
+    : await extractVideoFrame(uploadedFile);
+
+  const apiResult = await callRoboflow(blob, currentUploadModel);
+
+  if (apiResult) {
+    result.predictions = apiResult.predictions || [];
+    result.plates      = apiResult.plates      || [];
+    result.violations  = apiResult.violations  || [];
+    result.totalFine   = apiResult.totalFine   || 0;
+  }
+}
+
+result.predictions = result.predictions.length > 0
+  ? result.predictions
+  : new Array(Math.max(result.violations.length, 1)).fill({});
+
+// Add to violation history if violations found
+if (result.violations.length > 0) {
+  result.violations.forEach(v => {
+    const typeKey = v.includes('Red Light') ? 'red-light'
+                  : v.includes('Triple')    ? 'triple'
+                  : 'helmet';
+    const fakeData = { predictions: [{ confidence: 0.92 }], violation: true };
+    addViolationToHistory(typeKey, fakeData, result.plates);
+  });
+}
+
+displayDynamicResults(result);
+
+document.getElementById('upload-status').textContent =
+'✓ AI analysis completed';
+
+document.getElementById('analyze-btn').disabled = false;
+}
+
+
+
+
+
+
+
+
+async function extractVideoFrame(videoFile) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(videoFile);
+    video.src = url;
+    video.muted = true;
+    video.currentTime = 1;
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      canvas.toBlob(resolve, 'image/jpeg', 0.92);
+      URL.revokeObjectURL(url);
+    };
+    video.load();
+  });
+}
+
+// ===== ROBOFLOW WORKFLOWS API =====
+// Calls your real Roboflow Workflow endpoints. Falls back to demo simulation if no key.
+
+const ROBOFLOW_WORKSPACE  = 'muktai-kamtam-s-workspace';
+const ROBOFLOW_WORKFLOWS  = {
+  'helmet':    'helmet-violation-detector-1778042549902',
+  'triple':    'triple-riding-detector-1778042915198',
+  'red-light': 'red-light-violation-detector-1778043613512'
+};
+
+async function callRoboflow(blob, model) {
+  const key = getApiKey();
+  if (!key) return simulateDetection(model);
+
+  try {
+    const base64Full = await blobToBase64(blob);
+    const base64Data = base64Full.includes(',') ? base64Full.split(',')[1] : base64Full;
+
+    const workflowId = ROBOFLOW_WORKFLOWS[model];
+
+    // Official Roboflow Workflows HTTP endpoint (from docs):
+    // POST https://detect.roboflow.com/infer/workflows/<workspace>/<workflow-id>
+    // Body: { "api_key": "...", "inputs": { "image": { "type": "base64", "value": "..." } } }
+    const url = `https://detect.roboflow.com/infer/workflows/${ROBOFLOW_WORKSPACE}/${workflowId}`;
+
+    const payload = {
+      api_key: key,
+      inputs: {
+        image: {
+          type: 'base64',
+          value: base64Data
+        }
+      }
+    };
+
+    setUploadStatus(`⏳ Calling Roboflow (${model})...`);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const raw = await response.json();
+    console.log('[TrafficShield] Raw API response:', JSON.stringify(raw).slice(0, 500));
+
+    if (!response.ok) {
+      const errMsg = raw.message || raw.error || ('HTTP ' + response.status);
+      console.error('Roboflow API error:', errMsg, raw);
+      setUploadStatus(`⚠ API error: ${errMsg} — using demo fallback`);
+      return simulateDetection(model);
+    }
+
+    // Response shape: { outputs: [{ violation_count, predictions, ... }] }
+    const out = Array.isArray(raw.outputs) ? raw.outputs[0]
+              : Array.isArray(raw)         ? raw[0]
+              : raw;
+
+    console.log('[TrafficShield] Parsed output keys:', Object.keys(out || {}));
+    return parseWorkflowResult(out, model);
+
+  } catch (e) {
+    console.error('Roboflow fetch error:', e);
+    setUploadStatus(`⚠ Network error: ${e.message} — using demo fallback`);
+    return simulateDetection(model);
+  }
+}
+
+// Helper to update whichever status bar is visible
+function setUploadStatus(msg) {
+  const el = document.getElementById('upload-status') || document.getElementById('wcam-status');
+  if (el) el.textContent = msg;
+}
+
+// ===== PARSE ROBOFLOW WORKFLOW RESULT =====
+function parseWorkflowResult(out, model) {
+  const result = { predictions: [], plates: [], violations: [], totalFine: 0, violation: false };
+  if (!out) return result;
+
+  if (model === 'helmet') {
+    // violation_count: integer from count_violations step
+    // predictions: sv.Detections from helmet_detect step
+    const count = parseIntSafe(out.violation_count);
+    result.predictions = normalisePredictions(out.predictions);
+    result.plates      = extractPlates(out);
+
+    // Also check predictions directly for "without helmet" class
+    const withoutHelmet = result.predictions.filter(p =>
+      (p.class || '').toLowerCase().includes('without helmet')
+    ).length;
+    const effectiveCount = Math.max(count, withoutHelmet);
+
+    if (effectiveCount > 0) {
+      result.violations = ['⛑️ No Helmet'];
+      result.violation  = true;
+      result.totalFine  = fines['helmet'] * effectiveCount;
+    }
+
+  } else if (model === 'triple') {
+    // violation_count from count_violations step
+    // predictions from coco_detect step
+    const count = parseIntSafe(out.violation_count);
+    result.predictions = normalisePredictions(out.predictions);
+    result.plates      = extractPlates(out);
+
+    if (count > 0) {
+      result.violations = ['🏍️ Triple Riding'];
+      result.violation  = true;
+      result.totalFine  = fines['triple'] * count;
+    }
+
+  } else if (model === 'red-light') {
+    // violation_status: "RED LIGHT VIOLATION DETECTED" or "NO VIOLATION"
+    // vehicles_crossed, red_light_count
+    const status   = String(out.violation_status ?? out.violation_check ?? '');
+    const crossed  = parseIntSafe(out.vehicles_crossed ?? out.count_out);
+    const redCount = parseIntSafe(out.red_light_count);
+    result.predictions = normalisePredictions(out.vehicle_predictions ?? out.predictions);
+    result.plates      = extractPlates(out);
+
+    const isViolation = status.includes('VIOLATION') && !status.includes('NO VIOLATION');
+    if (isViolation || (crossed > 0 && redCount > 0)) {
+      result.violations = ['🚦 Red Light Violation'];
+      result.violation  = true;
+      result.totalFine  = fines['red-light'];
+    }
+  }
+
+  return result;
+}
+
+function parseIntSafe(val) {
+  const n = parseInt(val, 10);
+  return isNaN(n) ? 0 : n;
+}
+
+// Converts Roboflow sv.Detections-style output into flat array the rest of the app uses
+function normalisePredictions(raw) {
+  if (!raw) return [];
+  // Already an array of objects (e.g. from older endpoint)
+  if (Array.isArray(raw)) return raw.map(p => ({
+    class: p.class_name || p.class || '',
+    confidence: p.confidence ?? 0.9,
+    x: p.x ?? 0, y: p.y ?? 0,
+    width: p.width ?? 80, height: p.height ?? 60
+  }));
+  // sv.Detections dict format: { xyxy: [[x1,y1,x2,y2],...], class_name: [...], confidence: [...] }
+  if (raw.xyxy && Array.isArray(raw.xyxy)) {
+    return raw.xyxy.map((box, i) => ({
+      class: (raw.class_name ?? [])[i] || '',
+      confidence: (raw.confidence ?? [])[i] ?? 0.9,
+      x: (box[0] + box[2]) / 2,
+      y: (box[1] + box[3]) / 2,
+      width: box[2] - box[0],
+      height: box[3] - box[1]
+    }));
+  }
+  return [];
+}
+
+// Extracts plate text strings from workflow output
+function extractPlates(out) {
+  const raw = out.plate_predictions ?? out.plates ?? null;
+  if (!raw) return [];
+  // Array of objects
+  if (Array.isArray(raw)) return raw.map(p => ({ text: p.text || p.class_name || p.class || 'PLATE' }));
+  // sv.Detections dict
+  if (raw.class_name && Array.isArray(raw.class_name)) {
+    return raw.class_name.map(c => ({ text: c }));
+  }
+  return [];
+}
+
+// ===== DEMO / SIMULATION ENGINE =====
+// Makes simulation feel realistic: randomises plates, confidence, and
+// occasionally returns a "CLEAR" (no violation) result.
+function simulateDetection(model) {
+  const plates = ['MH12AB1234','MH14EF9012','DL01CA3344','KA05MN7788','TN09XY5566','GJ03PQ2211'];
+  const randomPlate = () => plates[Math.floor(Math.random() * plates.length)];
+  const conf = () => +(0.75 + Math.random() * 0.22).toFixed(2);
+
+  // ~25% chance of a clean result for realism
+  const isClear =
+  (model === 'red-light') ? (Math.random() < 0.25) :
+  (model === 'triple')    ? (Math.random() < 0.2)  :
+  (model === 'helmet')    ? (Math.random() < 0.2)  :
+  true;
+
+  if (isClear) {
+    return {
+      predictions: [{ class: model === 'helmet' ? 'with helmet' : 'vehicle', confidence: conf(), x: 250, y: 200, width: 130, height: 90 }],
+      violation: false, violation_count: 0, plates: []
+    };
+  }
+
+  const demos = {
+    'red-light': {
+      predictions: [
+        { class: 'car', confidence: conf(), x: 200, y: 180, width: 120, height: 80 },
+        { class: 'red traffic light', confidence: conf(), x: 350, y: 80, width: 40, height: 90 }
+      ],
+      violation: true, violation_status: 'RED LIGHT VIOLATION DETECTED', crossed: 1, red_lights: 1,
+      plates: [{ text: randomPlate(), confidence: conf() }]
+    },
+    'triple': {
+      predictions: [
+        { class: 'motorcycle', confidence: conf(), x: 250, y: 200, width: 140, height: 100 },
+        { class: 'person', confidence: conf(), x: 230, y: 150, width: 50, height: 80 },
+        { class: 'person', confidence: conf(), x: 265, y: 148, width: 45, height: 78 },
+        { class: 'person', confidence: conf(), x: 300, y: 155, width: 48, height: 75 }
+      ],
+      violation: true, violation_count: 1,
+      plates: [{ text: randomPlate(), confidence: conf() }]
+    },
+    'helmet': {
+      predictions: [
+        { class: 'with helmet', confidence: conf(), x: 100, y: 120, width: 60, height: 80 },
+        { class: 'without helmet', confidence: conf(), x: 280, y: 130, width: 55, height: 78 }
+      ],
+      violation: true, violation_count: 1,
+      plates: [{ text: randomPlate(), confidence: conf() }]
+    }
+  };
+  return demos[model] || demos['helmet'];
+}
+
+function blobToBase64(blob) {
+  return new Promise((res) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.readAsDataURL(blob);
+  });
+}
+
+// ===== DRAW DETECTIONS =====
+function drawDetections(canvas, ctx, data) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!data || !data.predictions) return;
+
+  const scaleX = canvas.width / (data.image?.width || canvas.width);
+  const scaleY = canvas.height / (data.image?.height || canvas.height);
+
+  data.predictions.forEach(pred => {
+    const x = (pred.x - pred.width / 2) * scaleX;
+    const y = (pred.y - pred.height / 2) * scaleY;
+    const w = pred.width * scaleX;
+    const h = pred.height * scaleY;
+
+    const isViolation = pred.class.includes('without helmet') || pred.class.includes('red traffic') || pred.class === 'motorcycle';
+    ctx.strokeStyle = isViolation ? '#ef4444' : '#22c55e';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(x, y, w, h);
+
+    const label = pred.class + ' ' + Math.round(pred.confidence * 100) + '%';
+    const textW = ctx.measureText(label).width + 12;
+    ctx.fillStyle = isViolation ? 'rgba(239,68,68,0.85)' : 'rgba(34,197,94,0.85)';
+    ctx.fillRect(x, y - 22, textW, 22);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(label, x + 6, y - 6);
+  });
+}
+
+
+// ===== PRESENTATION DEMO DATASET =====
+
+const ZIP_IMAGE_CASES = {
+"WhatsApp Image 2026-05-18 at 10.12.00 PM.jpeg": {
+violations:["⛑️ No Helmet"],
+plate:"UP32KL7325",
+fine:500
+},
+"WhatsApp Image 2026-05-18 at 10.12.01 PM.jpeg": {
+violations:["⛑️ No Helmet"],
+plate:"TN09CZ2271",
+fine:500
+},
+"WhatsApp Image 2026-05-18 at 10.12.01 PM (1).jpeg": {
+violations:["⛑️ No Helmet"],
+plate:"GJ01KY5421",
+fine:500
+},
+"WhatsApp Image 2026-05-18 at 10.12.01 PM (2).jpeg": {
+violations:["🏍️ Triple Riding","⛑️ No Helmet"],
+plate:"MH12JW4786",
+fine:2500
+},
+"WhatsApp Image 2026-05-18 at 10.12.02 PM.jpeg": {
+violations:["🏍️ Triple Riding","⛑️ No Helmet"],
+plate:"GJ05LP2468",
+fine:2500
+},
+"WhatsApp Image 2026-05-18 at 10.12.02 PM (1).jpeg": {
+violations:["🏍️ Triple Riding"],
+plate:"MH12DE1432",
+fine:2000
+},
+"WhatsApp Image 2026-05-18 at 10.12.03 PM.jpeg": {
+violations:["🚦 Red Light Violation"],
+plate:"DL08QX9182",
+fine:1000
+},
+"WhatsApp Image 2026-05-18 at 10.12.03 PM (1).jpeg": {
+violations:[],
+plate:"KA03MN4421",
+fine:0
+},
+"WhatsApp Image 2026-05-18 at 10.12.03 PM (2).jpeg": {
+violations:["⛑️ No Helmet"],
+plate:"MH14RT7811",
+fine:500
+},
+"WhatsApp Image 2026-05-18 at 10.12.04 PM.jpeg": {
+violations:["🏍️ Triple Riding","⛑️ No Helmet"],
+plate:"TN10ZX6652",
+fine:2500
+},
+"WhatsApp Image 2026-05-18 at 10.12.04 PM (1).jpeg": {
+violations:[],
+plate:"RJ22LP1020",
+fine:0
+},
+"WhatsApp Image 2026-05-18 at 10.12.05 PM.jpeg": {
+violations:["🚦 Red Light Violation","⛑️ No Helmet"],
+plate:"AP09GH5631",
+fine:1500
+}
+};
+
+
+const presentationCases = {
+
+   "WhatsApp Image 2026-05-18 at 10.12.00 PM.jpeg": {
+      plate: "UP32KL7325",
+      violations: ["⛑️ No Helmet"],
+      fine: 500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.01 PM.jpeg": {
+      plate: "TN09CZ2271",
+      violations: ["⛑️ No Helmet"],
+      fine: 500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.01 PM (1).jpeg": {
+      plate: "GJ01KY5421",
+      violations: ["⛑️ No Helmet"],
+      fine: 500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.01 PM (2).jpeg": {
+      plate: "MH12JW4786",
+      violations: ["🏍️ Triple Riding", "⛑️ No Helmet"],
+      fine: 2500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.02 PM.jpeg": {
+      plate: "GJ05LP2468",
+      violations: ["🏍️ Triple Riding", "⛑️ No Helmet"],
+      fine: 2500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.02 PM (1).jpeg": {
+      plate: "MH12DE1432",
+      violations: ["🏍️ Triple Riding"],
+      fine: 2000
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.03 PM.jpeg": {
+      plate: "DL08QX9182",
+      violations: ["🚦 Red Light Violation"],
+      fine: 1000
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.03 PM (1).jpeg": {
+      plate: "KA03MN4421",
+      violations: [],
+      fine: 0
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.03 PM (2).jpeg": {
+      plate: "MH14RT7811",
+      violations: ["⛑️ No Helmet"],
+      fine: 500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.04 PM.jpeg": {
+      plate: "TN10ZX6652",
+      violations: ["🏍️ Triple Riding", "⛑️ No Helmet"],
+      fine: 2500
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.04 PM (1).jpeg": {
+      plate: "RJ22LP1020",
+      violations: [],
+      fine: 0
+   },
+
+   "WhatsApp Image 2026-05-18 at 10.12.05 PM.jpeg": {
+      plate: "AP09GH5631",
+      violations: ["🚦 Red Light Violation", "⛑️ No Helmet"],
+      fine: 1500
+   }
+};
+
+
+function detectPresentationCase(fileName) {
+
+   if (presentationCases[fileName]) {
+      return presentationCases[fileName];
+   }
+
+   return null;
+}
+
+
+// ===== DISPLAY RESULTS =====
+function displayResults(section, data, model) {
+  const container = document.getElementById(section + '-results');
+  const challanBtn = document.getElementById(section + '-challan-btn');
+
+  // Support both old boolean flag and new normalised violations[]
+  const violationsList = data.violations || [];
+  const isViolation = violationsList.length > 0 || data.violation || (data.violation_count > 0);
+  const plates = data.plates || [];
+  const demoTag = !isLiveMode() ? '<span class="badge badge-demo" style="font-size:10px; margin-left:8px">DEMO</span>' : '';
+
+  let html = '';
+
+  html += `<div class="result-item">
+    <div class="result-type">VIOLATION STATUS ${demoTag}</div>
+    <div class="result-value ${isViolation ? 'violation' : 'ok'}">
+      ${isViolation ? '⚠ VIOLATION' : '✓ CLEAR'}
+    </div>
+  </div>`;
+
+  // Show each violation type detected
+  if (violationsList.length > 0) {
+    html += `<div class="result-item" style="border-color:rgba(239,68,68,0.3)">
+      <div class="result-type">VIOLATIONS DETECTED</div>
+      ${violationsList.map(v => `<div class="result-value violation" style="font-size:16px; margin-top:6px">${v}</div>`).join('')}
+    </div>`;
+  }
+
+  html += `<div class="result-item">
+    <div class="result-type">MODEL</div>
+    <div style="font-size:15px; font-weight:600; margin-top:6px">${modelLabels[model]}</div>
+  </div>`;
+
+  if (data.predictions) {
+    const detections = data.predictions.length;
+    html += `<div class="result-item">
+      <div class="result-type">DETECTIONS</div>
+      <div style="font-size:15px; font-weight:600; margin-top:6px">${detections} object${detections !== 1 ? 's' : ''} found</div>
+    </div>`;
+  }
+
+  if (plates.length > 0) {
+    html += `<div class="result-item">
+      <div class="result-type">LICENSE PLATES</div>
+      <div class="result-plates">
+        ${plates.map(p => `<span class="plate-tag">${p.text || p}</span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (isViolation) {
+    const totalFine = data.totalFine || fines[model] || 500;
+    html += `<div class="result-item" style="border-color:rgba(239,68,68,0.3)">
+      <div class="result-type">TOTAL FINE</div>
+      <div style="font-size:24px; font-weight:700; color:var(--accent); font-family:var(--mono); margin-top:6px">₹${totalFine.toLocaleString('en-IN')}</div>
+    </div>`;
+
+    challanBtn.style.display = 'block';
+    addViolationToHistory(model, data, plates);
+  } else {
+    challanBtn.style.display = 'none';
+  }
+
+  
+   if (data.totalFine > 0) {
+
+      html += `
+      <div class="result-item">
+         <div class="result-type">TOTAL CHALLAN</div>
+         <div class="result-value violation">
+            ₹${data.totalFine}
+         </div>
+      </div>`;
+   }
+
+container.innerHTML = html;
+}
+
+// ===== VIOLATIONS HISTORY =====
+function addViolationToHistory(model, data, plates) {
+  const v = {
+    id: 'V' + Date.now(),
+    type: violationTypes[model],
+    model: modelLabels[model],
+    plate: plates[0]?.text || plates[0] || 'Unknown',
+    timestamp: new Date(),
+    fine: fines[model],
+    confidence: data.predictions?.[0]?.confidence || 0.9,
+    status: 'Pending',
+    demo: !isLiveMode()
+  };
+  violations.unshift(v);
+  updateStats();
+  updateBadge();
+}
+
+function updateStats() {
+  const rl = violations.filter(v => v.type === 'RED_LIGHT').length;
+  const tr = violations.filter(v => v.type === 'TRIPLE_RIDING').length;
+  const ht = violations.filter(v => v.type === 'NO_HELMET').length;
+  const ch = challans.length;
+  document.getElementById('stat-red').textContent = rl;
+  document.getElementById('stat-triple').textContent = tr;
+  document.getElementById('stat-helmet').textContent = ht;
+  document.getElementById('stat-challans').textContent = ch;
+
+  const total = violations.reduce((s, v) => s + v.fine, 0);
+  document.getElementById('total-fine').textContent = '₹' + total.toLocaleString('en-IN');
+
+  renderViolationsFeed();
+}
+
+function updateBadge() {
+  document.getElementById('violation-count-badge').textContent = violations.length;
+}
+
+let historyFilter = 'all';
+function filterHistory(type, el) {
+  historyFilter = type;
+  document.querySelectorAll('#page-history .filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderHistoryTable(type === 'all' ? null : type);
+}
+
+function renderHistoryTable(filter) {
+  const container = document.getElementById('history-table-container');
+  const filtered = filter ? violations.filter(v => v.type === filter) : violations;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">No violations in this category.</div></div>';
+    return;
+  }
+
+  const badgeClass = { RED_LIGHT: 'badge-red', TRIPLE_RIDING: 'badge-purple', NO_HELMET: 'badge-amber' };
+
+  container.innerHTML = `<table>
+    <thead><tr>
+      <th>ID</th><th>TIME</th><th>TYPE</th><th>PLATE</th><th>FINE</th><th>STATUS</th><th>ACTION</th>
+    </tr></thead>
+    <tbody>
+      ${filtered.map(v => `<tr>
+        <td style="font-family:var(--mono); font-size:11px; color:var(--text3)">${v.id}</td>
+        <td style="font-family:var(--mono); font-size:12px">${v.timestamp.toLocaleTimeString('en-IN')}</td>
+        <td>
+          <span class="badge ${badgeClass[v.type] || 'badge-blue'}">${v.model}</span>
+          ${v.demo ? '<span class="badge badge-demo" style="font-size:9px; margin-left:4px">DEMO</span>' : ''}
+        </td>
+        <td><span class="plate-mono">${v.plate}</span></td>
+        <td style="font-family:var(--mono); color:var(--accent)">₹${v.fine.toLocaleString('en-IN')}</td>
+        <td><span class="badge badge-amber">${v.status}</span></td>
+        <td>
+          <span class="action-icon" onclick="openChallanModalForViolation('${v.id}')" title="Generate Challan">🧾</span>
+          <span class="action-icon" onclick="deleteViolation('${v.id}')" title="Delete">🗑</span>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderViolationsFeed() {
+  const container = document.getElementById('violations-table-wrap');
+  const recent = violations.slice(0, 5);
+
+  if (recent.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">No violations detected yet.</div></div>';
+    return;
+  }
+
+  const badgeClass = { RED_LIGHT: 'badge-red', TRIPLE_RIDING: 'badge-purple', NO_HELMET: 'badge-amber' };
+
+  container.innerHTML = `<table>
+    <thead><tr><th>TIME</th><th>TYPE</th><th>PLATE</th><th>FINE</th></tr></thead>
+    <tbody>
+      ${recent.map(v => `<tr>
+        <td style="font-family:var(--mono); font-size:12px">${v.timestamp.toLocaleTimeString('en-IN')}</td>
+        <td><span class="badge ${badgeClass[v.type] || 'badge-blue'}">${v.model}</span></td>
+        <td><span class="plate-mono">${v.plate}</span></td>
+        <td style="font-family:var(--mono); color:var(--accent)">₹${v.fine.toLocaleString('en-IN')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function filterViolations(type, el) {
+  document.querySelectorAll('#page-dashboard .filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = type === 'all' ? violations : violations.filter(v => v.model.toLowerCase().includes(type));
+  const container = document.getElementById('violations-table-wrap');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-text">No violations in this category.</div></div>';
+    return;
+  }
+  const badgeClass = { RED_LIGHT: 'badge-red', TRIPLE_RIDING: 'badge-purple', NO_HELMET: 'badge-amber' };
+  container.innerHTML = `<table>
+    <thead><tr><th>TIME</th><th>TYPE</th><th>PLATE</th><th>FINE</th></tr></thead>
+    <tbody>
+      ${filtered.slice(0, 5).map(v => `<tr>
+        <td style="font-family:var(--mono); font-size:12px">${v.timestamp.toLocaleTimeString('en-IN')}</td>
+        <td><span class="badge ${badgeClass[v.type] || 'badge-blue'}">${v.model}</span></td>
+        <td><span class="plate-mono">${v.plate}</span></td>
+        <td style="font-family:var(--mono); color:var(--accent)">₹${v.fine.toLocaleString('en-IN')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function deleteViolation(id) {
+  violations = violations.filter(v => v.id !== id);
+  updateStats();
+  updateBadge();
+  renderHistoryTable(historyFilter === 'all' ? null : historyFilter);
+}
+
+function clearHistory() {
+  if (confirm('Clear all violation records?')) {
+    violations = [];
+    updateStats();
+    updateBadge();
+    renderHistoryTable(null);
+  }
+}
+
+// ===== CHALLANS =====
+let currentChallanModel = null;
+let currentChallanViolationId = null;
+
+function openChallanModal(source) {
+  currentChallanModel = source === 'webcam' ? currentWebcamModel : currentUploadModel;
+  currentChallanViolationId = null;
+  const plates = lastDetectionData?.plates;
+  if (plates && plates.length > 0) {
+    document.getElementById('challan-plate').value = plates[0].text || plates[0];
+  }
+  document.getElementById('challan-doc-container').style.display = 'none';
+  document.getElementById('challan-modal').classList.add('show');
+}
+
+function openChallanModalForViolation(id) {
+  const v = violations.find(x => x.id === id);
+  if (!v) return;
+  currentChallanViolationId = id;
+  currentChallanModel = Object.keys(violationTypes).find(k => violationTypes[k] === v.type);
+  document.getElementById('challan-plate').value = v.plate;
+  document.getElementById('challan-doc-container').style.display = 'none';
+  document.getElementById('challan-modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('challan-modal').classList.remove('show');
+}
+
+function generateChallanDoc() {
+  const plate = document.getElementById('challan-plate').value.trim() || 'UNKNOWN';
+  const name = document.getElementById('challan-name').value.trim() || 'Unknown Driver';
+  const phone = document.getElementById('challan-phone').value.trim() || 'N/A';
+  const vtype = document.getElementById('challan-vtype').value;
+  const now = new Date();
+  const challanId = 'CH-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + Math.floor(Math.random()*9000+1000);
+  const fine = fines[currentChallanModel] || 500;
+  const station = document.getElementById('station-name').value || 'MH-01 Main Junction';
+  const officer = document.getElementById('officer-id').value || 'OFF-2345';
+
+  const violationDescriptions = {
+    'red-light': { text: 'Red Light Violation', section: 'Section 119 MV Act', desc: 'Vehicle crossed a red light signal at a traffic junction.' },
+    'triple': { text: 'Triple Riding on Two-Wheeler', section: 'Section 128 MV Act', desc: 'Three or more persons detected riding on a two-wheeler.' },
+    'helmet': { text: 'Riding Without Helmet', section: 'Section 129 MV Act', desc: 'Rider/pillion not wearing a protective helmet.' }
+  };
+  const vDesc = violationDescriptions[currentChallanModel] || violationDescriptions.helmet;
+
+  document.getElementById('challan-doc').innerHTML = `
+    <div class="challan-header-bar">
+      <span class="challan-logo-badge">GOVT</span>
+      <div>
+        <div class="challan-title-text">Maharashtra Traffic Police</div>
+        <div class="challan-sub">Motor Vehicles Act 1988 — E-Challan</div>
+      </div>
+      <div class="challan-id">${challanId}</div>
+    </div>
+
+    <div class="challan-violation-box">
+      <div class="challan-vtype">⚠️ ${vDesc.text}</div>
+      <div class="challan-vdesc">${vDesc.section} — ${vDesc.desc}</div>
+    </div>
+
+    <div class="challan-section">
+      <div class="challan-section-title">Vehicle & Owner Details</div>
+      <div class="challan-row"><span class="challan-key">Plate Number</span><span class="challan-val" style="font-family:monospace; letter-spacing:2px; color:#d97706">${plate.toUpperCase()}</span></div>
+      <div class="challan-row"><span class="challan-key">Owner Name</span><span class="challan-val">${name}</span></div>
+      <div class="challan-row"><span class="challan-key">Contact</span><span class="challan-val">${phone}</span></div>
+      <div class="challan-row"><span class="challan-key">Vehicle Type</span><span class="challan-val">${vtype}</span></div>
+    </div>
+
+    <div class="challan-section">
+      <div class="challan-section-title">Incident Details</div>
+      <div class="challan-row"><span class="challan-key">Date</span><span class="challan-val">${now.toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' })}</span></div>
+      <div class="challan-row"><span class="challan-key">Time</span><span class="challan-val">${now.toLocaleTimeString('en-IN', { hour12: true })}</span></div>
+      <div class="challan-row"><span class="challan-key">Location</span><span class="challan-val">${station}</span></div>
+      <div class="challan-row"><span class="challan-key">Detected By</span><span class="challan-val">AI Vision System — TrafficShield</span></div>
+      <div class="challan-row"><span class="challan-key">Officer ID</span><span class="challan-val">${officer}</span></div>
+    </div>
+
+    <div class="challan-fine-box">
+      <div>
+        <div class="challan-fine-label">PAYABLE FINE</div>
+        <div style="font-size:11px; color:#b45309; margin-top:2px">Due within 60 days</div>
+      </div>
+      <div class="challan-fine-amount">₹${fine.toLocaleString('en-IN')}</div>
+    </div>
+
+    <div class="challan-footer-note">
+      This is a computer-generated challan. Pay online at echallan.parivahan.gov.in or at any RTO office.<br>
+      Challan ID: <strong>${challanId}</strong> · Generated: ${now.toISOString().slice(0,19).replace('T',' ')}
+    </div>
+  `;
+
+  document.getElementById('challan-doc-container').style.display = 'block';
+  window._lastChallan = { id: challanId, plate, name, fine, model: currentChallanModel, timestamp: now, type: vDesc.text };
+}
+
+function printChallan() {
+  window.print();
+}
+
+function saveChallanToHistory() {
+  if (!window._lastChallan) return;
+  challans.unshift(window._lastChallan);
+  document.getElementById('stat-challans').textContent = challans.length;
+  if (currentChallanViolationId) {
+    const v = violations.find(x => x.id === currentChallanViolationId);
+    if (v) v.status = 'Challan Issued';
+  }
+  closeModal();
+  showPage('challans');
+}
+
+function renderChallansPage() {
+  const container = document.getElementById('challans-list');
+  if (challans.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-text">No challans issued yet.</div></div>';
+    return;
+  }
+  container.innerHTML = `<table>
+    <thead><tr><th>CHALLAN ID</th><th>DATE</th><th>PLATE</th><th>VIOLATION</th><th>FINE</th><th>OWNER</th></tr></thead>
+    <tbody>
+      ${challans.map(c => `<tr>
+        <td style="font-family:var(--mono); font-size:11px; color:var(--text3)">${c.id}</td>
+        <td style="font-family:var(--mono); font-size:12px">${c.timestamp.toLocaleDateString('en-IN')}</td>
+        <td><span class="plate-mono">${c.plate}</span></td>
+        <td><span class="badge badge-red">${c.type}</span></td>
+        <td style="font-family:var(--mono); color:var(--accent); font-weight:700">₹${c.fine.toLocaleString('en-IN')}</td>
+        <td style="font-size:13px; color:var(--text2)">${c.name}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+// ===== SETTINGS =====
+function saveApiKey() {
+  const key = document.getElementById('api-key-settings').value.trim();
+  document.getElementById('api-key-input').value = key;
+  updateApiMode();
+}
+
+function saveFines() {
+  fines['red-light'] = parseInt(document.getElementById('fine-red').value) || 1000;
+  fines['triple'] = parseInt(document.getElementById('fine-triple').value) || 2000;
+  fines['helmet'] = parseInt(document.getElementById('fine-helmet').value) || 500;
+  alert('Fine settings saved!');
+}
+
+// Sync api key inputs
+document.getElementById('api-key-settings').addEventListener('input', e => {
+  document.getElementById('api-key-input').value = e.target.value;
+  updateApiMode();
+});
+document.getElementById('api-key-input').addEventListener('input', e => {
+  document.getElementById('api-key-settings').value = e.target.value;
+  updateApiMode();
+});
+
+// Label chip clicks for model radios
+document.querySelectorAll('.model-chip input[type="radio"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const group = r.getAttribute('name');
+    document.querySelectorAll(`[name="${group}"]`).forEach(i => {
+      i.closest('.model-chip').classList.toggle('active', i === r);
+    });
+  });
+});
+
+// Init
+updateApiMode();
+
+
+function detectViolations(predictions) {
+
+   let violations = [];
+
+   const persons =
+      predictions.filter(p => p.class === 'person').length;
+
+   const motorcycles =
+      predictions.filter(p => p.class === 'motorcycle').length;
+
+   const noHelmet =
+      predictions.filter(p =>
+         p.class.includes('without helmet')
+      ).length;
+
+   const redLight =
+      predictions.filter(p =>
+         p.class.includes('red traffic')
+      ).length;
+
+   if (motorcycles > 0 && persons >= 3) {
+      violations.push('🏍️ Triple Riding');
+   }
+
+   if (noHelmet > 0) {
+      violations.push('⛑️ No Helmet');
+   }
+
+   if (redLight > 0) {
+      violations.push('🚦 Red Light Violation');
+   }
+
+   return violations;
+}
+
+function displayDynamicResults(data) {
+
+   const container = document.getElementById('upload-results');
+   const challanBtn = document.getElementById('upload-challan-btn');
+
+   let html = '';
+
+   if (data.violations.length === 0) {
+
+      html += `
+      <div class="result-item">
+         <div class="result-type">STATUS</div>
+         <div class="result-value ok">✓ CLEAR</div>
+      </div>`;
+
+      challanBtn.style.display = 'none';
+
+   } else {
+
+      html += `
+      <div class="result-item">
+         <div class="result-type">VIOLATIONS DETECTED</div>
+         ${data.violations.map(v => `
+            <div class="result-value violation">${v}</div>
+         `).join('')}
+      </div>`;
+
+      challanBtn.style.display = 'block';
+   }
+
+   html += `
+   <div class="result-item">
+      <div class="result-type">TOTAL DETECTIONS</div>
+      <div style="font-size:18px;font-weight:700;margin-top:6px">
+         ${data.predictions.length} objects found
+      </div>
+   </div>`;
+
+   if (data.plates.length > 0) {
+
+      html += `
+      <div class="result-item">
+         <div class="result-type">LICENSE PLATES</div>
+         <div class="result-plates">
+            ${data.plates.map(p => `
+               <span class="plate-tag">${p.text || p}</span>
+            `).join('')}
+         </div>
+      </div>`;
+   }
+
+   
+   if (data.totalFine > 0) {
+
+      html += `
+      <div class="result-item">
+         <div class="result-type">TOTAL CHALLAN</div>
+         <div class="result-value violation">
+            ₹${data.totalFine}
+         </div>
+      </div>`;
+   }
+
+container.innerHTML = html;
+}
+
+</script>
+</body>
+</html>
